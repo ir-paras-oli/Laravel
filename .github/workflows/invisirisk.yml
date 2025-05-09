@@ -1,26 +1,46 @@
-name: PHP Project
+name: Laravel
 
 on:
+  schedule:
+    - cron: '45 2 * * *'  # Runs daily at 8:30 AM Nepal Time
   workflow_dispatch:
 
 permissions:
   checks: write
   contents: write
   packages: read
+  actions: write
 
 jobs:
-  php-application-build:
+  sync-and-build:
     runs-on: ubuntu-latest
-    name: Run build 
+    name: Sync fork and Run build
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Set up Git
+        run: |
+          git config user.name "ir-paras-oli"
+          git config user.email "paras.oli@invisirisk.com"
+      - name: Add upstream and sync fork
+        run: |
+          git remote add upstream https://github.com/laravel/framework.git
+          git fetch upstream
+          git checkout main
+          git merge upstream/main --no-edit
+          git remote set-url origin https://x-access-token:${{ secrets.MY_PAT }}@github.com/ir-paras-oli/Laravel.git
+          git push https://x-access-token:${{ secrets.MY_PAT }}@github.com/ir-paras-oli/Laravel 12.x
+
       - name: Setup PSE
         uses: invisirisk/pse-action@latest
         with:
           api_url: "https://app.invisirisk.com"
           app_token: ${{ secrets.IR_API_KEY }}
-
-      - uses: actions/checkout@v4
 
       - name: Set up PHP 8.3 with Composer
         uses: shivammathur/setup-php@v2
@@ -35,7 +55,7 @@ jobs:
           key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
           restore-keys: ${{ runner.os }}-composer-
 
-      - name: Install dependencies (retry logic)
+      - name: Install Laravel dependencies (with retry)
         run: |
           for i in 1 2 3 4 5; do
             composer install --no-interaction --prefer-dist && break || sleep 15
@@ -43,6 +63,10 @@ jobs:
 
       - name: Cleanup PSE
         if: always()
-        uses: invisirisk/pse-action@dev-test
+        uses: invisirisk/pse-action@latest
         with:
           cleanup: "true"
+
+
+
+  
