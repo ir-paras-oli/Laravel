@@ -19,7 +19,6 @@ jobs:
         with:
           api_url: "https://app.invisirisk.com"
           app_token: ${{ secrets.IR_API_KEY }}
-          job_status: ${{ job.status }}
 
       - uses: actions/checkout@v4
 
