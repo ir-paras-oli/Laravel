@@ -3281,6 +3281,21 @@ class DatabaseEloquentModelTest extends TestCase
         $this->assertNull($user->getAttribute('name'));
     }
 
+    public function testDiscardChangesWithCasts()
+    {
+        $model = new EloquentModelWithPrimitiveCasts();
+
+        $model->address_line_one = '123 Main Street';
+
+        $this->assertEquals('123 Main Street', $model->address->lineOne);
+        $this->assertEquals('123 MAIN STREET', $model->address_in_caps);
+
+        $model->discardChanges();
+
+        $this->assertNull($model->address->lineOne);
+        $this->assertNull($model->address_in_caps);
+    }
+
     public function testHasAttribute()
     {
         $user = new EloquentModelStub([
@@ -3350,6 +3365,39 @@ class DatabaseEloquentModelTest extends TestCase
         $this->assertEquals(EloquentModelWithUseFactoryAttribute::class, $factory->modelName());
         $this->assertEquals('test name', $instance->name); // Small smoke test to ensure the factory is working
     }
+
+    public function testUseCustomBuilderWithUseEloquentBuilderAttribute()
+    {
+        $model = new EloquentModelWithUseEloquentBuilderAttributeStub();
+
+        $query = $this->createMock(\Illuminate\Database\Query\Builder::class);
+        $eloquentBuilder = $model->newEloquentBuilder($query);
+
+        $this->assertInstanceOf(CustomBuilder::class, $eloquentBuilder);
+    }
+
+    public function testDefaultBuilderIsUsedWhenUseEloquentBuilderAttributeIsNotPresent()
+    {
+        $model = new EloquentModelWithoutUseEloquentBuilderAttributeStub();
+
+        $query = $this->createMock(\Illuminate\Database\Query\Builder::class);
+        $eloquentBuilder = $model->newEloquentBuilder($query);
+
+        $this->assertNotInstanceOf(CustomBuilder::class, $eloquentBuilder);
+    }
+}
+
+class CustomBuilder extends Builder
+{
+}
+
+#[\Illuminate\Database\Eloquent\Attributes\UseEloquentBuilder(CustomBuilder::class)]
+class EloquentModelWithUseEloquentBuilderAttributeStub extends Model
+{
+}
+
+class EloquentModelWithoutUseEloquentBuilderAttributeStub extends Model
+{
 }
 
 class EloquentTestObserverStub
@@ -3994,6 +4042,17 @@ class EloquentModelWithPrimitiveCasts extends Model
     {
         return Attribute::get(fn () => 'ok');
     }
+
+    public function addressInCaps(): Attribute
+    {
+        return Attribute::get(
+            function () {
+                $value = $this->getAttributes()['address_line_one'] ?? null;
+
+                return is_string($value) ? strtoupper($value) : $value;
+            }
+        )->shouldCache();
+    }
 }
 
 enum CastableBackedEnum: string
@@ -4003,6 +4062,12 @@ enum CastableBackedEnum: string
 
 class Address implements Castable
 {
+    public function __construct(
+        public ?string $lineOne = null,
+        public ?string $lineTwo = null
+    ) {
+    }
+
     public static function castUsing(array $arguments): CastsAttributes
     {
         return new class implements CastsAttributes
