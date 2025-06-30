@@ -951,7 +951,7 @@ class Arr
      * Get the first item in the array, but only if exactly one item exists. Otherwise, throw an exception.
      *
      * @param  array  $array
-     * @param  callable(mixed, array-key): array|null  $callback
+     * @param  (callable(mixed, array-key): array)|null  $callback
      *
      * @throws \Illuminate\Support\ItemNotFoundException
      * @throws \Illuminate\Support\MultipleItemsFoundException
@@ -1059,7 +1059,7 @@ class Arr
     /**
      * Conditionally compile classes from an array into a CSS class list.
      *
-     * @param  array  $array
+     * @param  array|string  $array
      * @return string
      */
     public static function toCssClasses($array)
@@ -1082,7 +1082,7 @@ class Arr
     /**
      * Conditionally compile styles from an array into a style list.
      *
-     * @param  array  $array
+     * @param  array|string  $array
      * @return string
      */
     public static function toCssStyles($array)
